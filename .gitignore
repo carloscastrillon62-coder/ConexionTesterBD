@@ -1,0 +1,11 @@
+# Archivos compilados
+out/
+*.class
+
+# Bases de datos creadas al probar la conexion
+*.db
+
+# Configuracion de editores
+.idea/
+.vscode/
+*.iml
