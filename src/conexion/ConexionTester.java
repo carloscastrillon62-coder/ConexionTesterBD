@@ -2,6 +2,7 @@ package conexion;
 
 import java.awt.BorderLayout;
 import java.awt.Color;
+import java.awt.FlowLayout;
 import java.awt.Font;
 import java.awt.GridLayout;
 import java.awt.event.ActionEvent;
@@ -41,6 +42,10 @@ import javax.swing.UnsupportedLookAndFeelException;
  *  3. actionPerformed(): evento del botón "Probar conexión" (ActionListener).
  *  4. probarConexion(): lógica JDBC con try-catch y try-with-resources.
  *  5. mostrarResultado(): presenta el mensaje en verde (éxito) o rojo (error).
+ *
+ * Cuando la conexión es exitosa se habilita el botón "Abrir inventario (CRUD)",
+ * que abre la ventana GestionProductos con la misma URL para crear, consultar,
+ * actualizar y eliminar productos de la base de datos.
  */
 public final class ConexionTester extends JFrame implements ActionListener {
 
@@ -66,7 +71,11 @@ public final class ConexionTester extends JFrame implements ActionListener {
     private final JTextField campoUsuario = new JTextField(32);
     private final JPasswordField campoContrasena = new JPasswordField(32);
     private final JButton botonProbar = new JButton("Probar conexión");
+    private final JButton botonInventario = new JButton("Abrir inventario (CRUD)");
     private final JTextArea areaResultado = new JTextArea(9, 50);
+
+    /** URL de la última conexión exitosa; es la que usa la ventana del inventario. */
+    private String urlConectada;
 
     /** Resultado inmutable de una prueba de conexión. */
     record Resultado(boolean exitoso, String mensaje) {
@@ -87,6 +96,8 @@ public final class ConexionTester extends JFrame implements ActionListener {
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setContentPane(construirPanelPrincipal());
         botonProbar.addActionListener(this);           // el JFrame escucha el clic del botón
+        botonInventario.setEnabled(false);              // se habilita solo si la conexión es exitosa
+        botonInventario.addActionListener(e -> new GestionProductos(urlConectada).setVisible(true));
         getRootPane().setDefaultButton(botonProbar);    // Enter también prueba la conexión
         pack();
         setLocationRelativeTo(null);                    // centrar en la pantalla
@@ -103,8 +114,9 @@ public final class ConexionTester extends JFrame implements ActionListener {
         formulario.add(new JLabel("Contraseña (vacía si es SQLite):"));
         formulario.add(campoContrasena);
 
-        JPanel panelBoton = new JPanel(new BorderLayout());
-        panelBoton.add(botonProbar, BorderLayout.EAST);
+        JPanel panelBoton = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
+        panelBoton.add(botonInventario);
+        panelBoton.add(botonProbar);
 
         JPanel parteSuperior = new JPanel(new BorderLayout(8, 8));
         parteSuperior.add(formulario, BorderLayout.CENTER);
@@ -137,6 +149,7 @@ public final class ConexionTester extends JFrame implements ActionListener {
         char[] contrasena = campoContrasena.getPassword();
 
         botonProbar.setEnabled(false);
+        botonInventario.setEnabled(false);
         areaResultado.setForeground(GRIS);
         areaResultado.setText("Probando conexión...");
 
@@ -151,7 +164,12 @@ public final class ConexionTester extends JFrame implements ActionListener {
             @Override
             protected void done() {
                 try {
-                    mostrarResultado(get());
+                    Resultado resultado = get();
+                    mostrarResultado(resultado);
+                    if (resultado.exitoso()) {
+                        urlConectada = url.trim();
+                        botonInventario.setEnabled(true);
+                    }
                 } catch (InterruptedException ex) {
                     Thread.currentThread().interrupt();
                     mostrarResultado(Resultado.error("La prueba fue interrumpida."));
